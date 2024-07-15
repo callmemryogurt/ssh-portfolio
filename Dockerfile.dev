@@ -1,0 +1,14 @@
+FROM mirror.gcr.io/library/golang:1.22-alpine
+
+# Install git.
+# Git is required for fetching the dependencies.
+RUN apk update && apk add --no-cache git
+RUN go install github.com/air-verse/air@latest
+# Fetch dependencies.
+# Using go get.
+WORKDIR /app
+
+# Build the binary.
+
+ENTRYPOINT ["air"]
+

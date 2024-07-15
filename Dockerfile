@@ -16,7 +16,9 @@ RUN GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o /go/bin/ssh
 ############################
 FROM scratch
 # Copy our static executable.
-COPY --from=builder /go/bin/ssh /go/bin/ssh
+COPY --from=builder /go/bin/ssh /app/ssh
+COPY .ssh/id_ed25519 /app
+COPY .ssh/id_ed25519.pub /app
 # Run the ssh binary.
-ENTRYPOINT ["/go/bin/ssh"]
+ENTRYPOINT ["/app/ssh"]
 
