@@ -29,6 +29,46 @@ const (
 	port = "42069"
 )
 
+const content = `
+# Today’s Menu
+
+## Appetizers
+
+| Name        | Price | Notes                           |
+| ---         | ---   | ---                             |
+| Tsukemono   | $2    | Just an appetizer               |
+| Tomato Soup | $4    | Made with San Marzano tomatoes  |
+| Okonomiyaki | $4    | Takes a few minutes to make     |
+| Curry       | $3    | We can add squash if you’d like |
+
+## Seasonal Dishes
+
+| Name                 | Price | Notes              |
+| ---                  | ---   | ---                |
+| Steamed bitter melon | $2    | Not so bitter      |
+| Takoyaki             | $3    | Fun to eat         |
+| Winter squash        | $3    | Today it's pumpkin |
+
+## Desserts
+
+| Name         | Price | Notes                 |
+| ---          | ---   | ---                   |
+| Dorayaki     | $4    | Looks good on rabbits |
+| Banana Split | $5    | A classic             |
+| Cream Puff   | $3    | Pretty creamy!        |
+
+All our dishes are made in-house by Karen, our chef. Most of our ingredients
+are from our garden or the fish market down the street.
+
+Some famous people that have eaten here lately:
+
+* [x] René Redzepi
+* [x] David Chang
+* [ ] Jiro Ono (maybe some day)
+
+Bon appétit!
+`
+
 // keyMap defines a set of keybindings. To work for help it must satisfy
 // key.Map. It could also very easily be a map[string]key.Binding.
 type keyMap struct {
@@ -107,6 +147,8 @@ func myCustomBubbleteaMiddleware() wish.Middleware {
 			height: pty.Window.Height,
 			time:   time.Now(),
 			ticks:  5,
+			help:   help.New(),
+			keys:   keys,
 		}
 		return newProg(m, append(bubbletea.MakeOptions(s), tea.WithAltScreen())...)
 	}
@@ -115,14 +157,13 @@ func myCustomBubbleteaMiddleware() wish.Middleware {
 
 // Just a generic tea.Model to demo terminal information of ssh.
 type model struct {
-	term     string
-	width    int
-	height   int
-	time     time.Time
-	ticks    int
-	help     help.Model
-	Quitting bool
-	// view     sting
+	term   string
+	width  int
+	height int
+	time   time.Time
+	ticks  int
+	help   help.Model
+	keys   keyMap
 }
 
 type timeMsg time.Time
@@ -149,12 +190,13 @@ func (m model) View() string {
 		k := welcomeView(m)
 		return k
 	}
+	helpView := m.help.View(m.keys)
 	s := "Your term is %s\n"
 	s += fmt.Sprintf("Ticker %v\n", m.ticks)
 	s += "Your window size is x: %d y: %d\n"
 	s += "Time: " + m.time.Format(time.RFC1123) + "\n\n"
-	s += "Press 'q' to quit\n"
-	return fmt.Sprintf(s, m.term, m.width, m.height)
+	// s += "Press 'q' to quit\n"
+	return fmt.Sprintf(s, m.term, m.width, m.height) + helpView
 }
 
 func welcomeView(m model) string {
@@ -169,7 +211,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		k := msg.String()
 		if k == "q" || k == "esc" || k == "ctrl+c" {
-			m.Quitting = true
 			return m, tea.Quit
 		}
 	}
@@ -186,6 +227,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// This is anit bot protection to terminate connection on any key
 		if m.ticks > 0 {
 			return m, tea.Quit
+		}
+		switch {
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 		}
 	}
 	return m, nil
