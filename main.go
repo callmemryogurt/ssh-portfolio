@@ -82,6 +82,115 @@ var keys = keyMap{
 	),
 }
 
+// You can write your own custom bubbletea middleware that wraps tea.Program.
+// Make sure you set the program input and output to ssh.Session.
+func myCustomBubbleteaMiddleware() wish.Middleware {
+	newProg := func(m tea.Model, opts ...tea.ProgramOption) *tea.Program {
+		p := tea.NewProgram(m, opts...)
+		go func() {
+			for {
+				<-time.After(1 * time.Second)
+				p.Send(timeMsg(time.Now()))
+			}
+		}()
+		return p
+	}
+	teaHandler := func(s ssh.Session) *tea.Program {
+		pty, _, active := s.Pty()
+		if !active {
+			wish.Fatalln(s, "no active terminal, skipping")
+			return nil
+		}
+		m := model{
+			term:   pty.Term,
+			width:  pty.Window.Width,
+			height: pty.Window.Height,
+			time:   time.Now(),
+			ticks:  5,
+		}
+		return newProg(m, append(bubbletea.MakeOptions(s), tea.WithAltScreen())...)
+	}
+	return bubbletea.MiddlewareWithProgramHandler(teaHandler, termenv.ANSI256)
+}
+
+// Just a generic tea.Model to demo terminal information of ssh.
+type model struct {
+	term     string
+	width    int
+	height   int
+	time     time.Time
+	ticks    int
+	help     help.Model
+	Quitting bool
+	// view     sting
+}
+
+type timeMsg time.Time
+
+type tickMsg time.Time
+
+func ticking() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+func (m model) Init() tea.Cmd {
+	time.Sleep(time.Second)
+	return ticking()
+}
+
+func welcomeModel(m model) {}
+
+func readModel(m model) {}
+
+func (m model) View() string {
+	if m.ticks > 0 {
+		k := welcomeView(m)
+		return k
+	}
+	s := "Your term is %s\n"
+	s += fmt.Sprintf("Ticker %v\n", m.ticks)
+	s += "Your window size is x: %d y: %d\n"
+	s += "Time: " + m.time.Format(time.RFC1123) + "\n\n"
+	s += "Press 'q' to quit\n"
+	return fmt.Sprintf(s, m.term, m.width, m.height)
+}
+
+func welcomeView(m model) string {
+	s := "This is init screen\n"
+	s += "I set this up to prevent SSH bots to do something harmful\n"
+	s += fmt.Sprintf("Please wait till timer go down: %v\n", m.ticks)
+	return s
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Make sure these keys always quit every where in app after init screen!
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		k := msg.String()
+		if k == "q" || k == "esc" || k == "ctrl+c" {
+			m.Quitting = true
+			return m, tea.Quit
+		}
+	}
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+		m.width = msg.Width
+	case tickMsg:
+		if m.ticks > 0 {
+			m.ticks--
+			return m, ticking()
+		}
+	case tea.KeyMsg:
+		// This is anit bot protection to terminate connection on any key
+		if m.ticks > 0 {
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
 func main() {
 	s, err := wish.NewServer(
 		wish.WithAddress(net.JoinHostPort(host, port)),
@@ -112,82 +221,4 @@ func main() {
 	if err := s.Shutdown(ctx); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
 		log.Error("Could not stop server", "error", err)
 	}
-}
-
-// You can write your own custom bubbletea middleware that wraps tea.Program.
-// Make sure you set the program input and output to ssh.Session.
-func myCustomBubbleteaMiddleware() wish.Middleware {
-	newProg := func(m tea.Model, opts ...tea.ProgramOption) *tea.Program {
-		p := tea.NewProgram(m, opts...)
-		go func() {
-			for {
-				<-time.After(1 * time.Second)
-				p.Send(timeMsg(time.Now()))
-			}
-		}()
-		return p
-	}
-	teaHandler := func(s ssh.Session) *tea.Program {
-		pty, _, active := s.Pty()
-		if !active {
-			wish.Fatalln(s, "no active terminal, skipping")
-			return nil
-		}
-		m := model{
-			term:   pty.Term,
-			width:  pty.Window.Width,
-			height: pty.Window.Height,
-			time:   time.Now(),
-		}
-		return newProg(m, append(bubbletea.MakeOptions(s), tea.WithAltScreen())...)
-	}
-	return bubbletea.MiddlewareWithProgramHandler(teaHandler, termenv.ANSI256)
-}
-
-// Just a generic tea.Model to demo terminal information of ssh.
-type model struct {
-	term   string
-	width  int
-	height int
-	time   time.Time
-	ticks  int
-	help   help.Model
-}
-
-type timeMsg time.Time
-
-type tickMsg time.Time
-
-func ticket() tea.Cmd {
-	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
-}
-
-func (m model) Init() tea.Cmd {
-	return ticket()
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case timeMsg:
-		m.time = time.Time(msg)
-	case tea.WindowSizeMsg:
-		m.height = msg.Height
-		m.width = msg.Width
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		}
-	}
-	return m, nil
-}
-
-func (m model) View() string {
-	s := "Your term is %s\n"
-	s += "Your window size is x: %d y: %d\n"
-	s += "Time: " + m.time.Format(time.RFC1123) + "\n\n"
-	s += "Press 'q' to quit\n"
-	return fmt.Sprintf(s, m.term, m.width, m.height)
 }
