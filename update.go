@@ -24,6 +24,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		if m.ticks > 0 {
 			m.ticks--
+
 			return m, ticking()
 		}
 	case tea.KeyMsg:
@@ -35,6 +36,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		}
+	default:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
 	return m, nil
 }

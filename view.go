@@ -8,7 +8,7 @@ import (
 func botView(m model) string {
 	s := "This is init screen\n"
 	s += "I set this up to prevent SSH bots to do something harmful\n"
-	s += fmt.Sprintf("Please wait till timer go down: %v\n", m.ticks)
+	s += fmt.Sprintf("%s Please wait till timer go down: %v\n", m.spinner.View(), m.ticks)
 	return s
 }
 

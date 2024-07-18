@@ -3,7 +3,6 @@ package main
 import (
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
@@ -30,15 +29,7 @@ func myCustomBubbleteaMiddleware() wish.Middleware {
 			wish.Fatalln(s, "no active terminal, skipping")
 			return nil
 		}
-		m := model{
-			term:   pty.Term,
-			width:  pty.Window.Width,
-			height: pty.Window.Height,
-			time:   time.Now(),
-			ticks:  5,
-			help:   help.New(),
-			keys:   keys,
-		}
+		m := initModel(pty)
 		return newProg(m, append(bubbletea.MakeOptions(s), tea.WithAltScreen())...)
 	}
 	return bubbletea.MiddlewareWithProgramHandler(teaHandler, termenv.ANSI256)
