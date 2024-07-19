@@ -52,8 +52,6 @@ func initModel(pty ssh.Pty) model {
 	m.spinner.Spinner = spinner.Pulse
 	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-	const width = 78
-
 	vp := viewport.New(m.width, m.height-5)
 	vp.Style = lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
@@ -62,7 +60,7 @@ func initModel(pty ssh.Pty) model {
 
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(width),
+		glamour.WithWordWrap(m.width),
 	)
 	if err != nil {
 		panic(err)
