@@ -5,21 +5,26 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
+
+	// "github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 )
 
 // Just a generic tea.Model to demo terminal information of ssh.
 type model struct {
-	term    string
-	width   int
-	height  int
-	time    time.Time
-	ticks   int
-	help    help.Model
-	keys    keyMap
-	spinner spinner.Model
+	term     string
+	width    int
+	height   int
+	time     time.Time
+	ticks    int
+	help     help.Model
+	keys     keyMap
+	spinner  spinner.Model
+	viewport viewport.Model
 }
 
 type timeMsg time.Time
@@ -44,8 +49,32 @@ func initModel(pty ssh.Pty) model {
 	}
 
 	m.spinner = spinner.New()
-	m.spinner.Spinner = spinner.Dot
+	m.spinner.Spinner = spinner.Pulse
 	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	const width = 78
+
+	vp := viewport.New(m.width, m.height-5)
+	vp.Style = lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("62")).
+		PaddingRight(2)
+
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(width),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	str, err := renderer.Render(content)
+	if err != nil {
+		panic(err)
+	}
+
+	vp.SetContent(str)
+	m.viewport = vp
 
 	return m
 }

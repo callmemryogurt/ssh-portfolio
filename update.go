@@ -5,9 +5,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func welcomeModel(m model) {}
+// func welcomeModel(m model) {}
 
-func readModel(m model) {}
+// func readModel(m model) {}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Make sure these keys always quit every where in app after init screen!
@@ -35,11 +35,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
+		default:
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
 		}
 	default:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
+		if m.ticks > 0 {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
 	}
 	return m, nil
 }

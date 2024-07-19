@@ -20,6 +20,9 @@ func welcomeView(m model) string {
 	// s += "Press 'q' to quit\n"
 	return fmt.Sprintf(s, m.term, m.width, m.height)
 }
+func glamurView(m model) string {
+	return m.viewport.View()
+}
 
 func (m model) View() string {
 	helpView := m.help.View(m.keys)
@@ -27,5 +30,6 @@ func (m model) View() string {
 		k := botView(m)
 		return k
 	}
-	return welcomeView(m) + helpView
+	//return welcomeView(m) + helpView
+	return glamurView(m) + "\n" + helpView
 }
