@@ -37,21 +37,7 @@ func ticking() tea.Cmd {
 	})
 }
 
-func initModel(pty ssh.Pty) model {
-	m := model{
-		term:   pty.Term,
-		width:  pty.Window.Width,
-		height: pty.Window.Height,
-		time:   time.Now(),
-		ticks:  5,
-		help:   help.New(),
-		keys:   keys,
-	}
-
-	m.spinner = spinner.New()
-	m.spinner.Spinner = spinner.Pulse
-	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-
+func (m *model) updateSize() {
 	vp := viewport.New(m.width, m.height-5)
 	vp.Style = lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
@@ -60,7 +46,7 @@ func initModel(pty ssh.Pty) model {
 
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(m.width),
+		glamour.WithWordWrap(m.width-2),
 	)
 	if err != nil {
 		panic(err)
@@ -74,6 +60,23 @@ func initModel(pty ssh.Pty) model {
 	vp.SetContent(str)
 	m.viewport = vp
 
+}
+
+func initModel(pty ssh.Pty) model {
+	m := model{
+		term:   pty.Term,
+		width:  pty.Window.Width,
+		height: pty.Window.Height,
+		time:   time.Now(),
+		ticks:  5,
+		help:   help.New(),
+		keys:   keys,
+	}
+	m.spinner = spinner.New()
+	m.spinner.Spinner = spinner.Pulse
+	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	m.updateSize()
 	return m
 }
 
